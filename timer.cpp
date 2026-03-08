@@ -1,15 +1,15 @@
 #include <LiquidCrystal_I2C.h>
 
-// LCD setup (address 0x27, 16x2 display)
-LiquidCrystal_I2C lcd(0x27, 16, 2);
+// LCD setup (address 0x27, 20x2 display)
+LiquidCrystal_I2C lcd(0x27, 20, 2);
 
 // Button pins
-const int BUTTON_SEC = 2;
+const int BUTTON_FIVE_MIN = 2;
 const int BUTTON_MIN = 3;
 const int BUTTON_HOUR = 4;
 const int BUTTON_RESET = 5;
 const int BUTTON_START = 6;
-const int BUTTON_BUZZER_OFF = 7;
+const int DOOR_OPEN = 7;
 
 // Relay pin for buzzer
 const int RELAY_BUZZER = 8;
@@ -29,12 +29,12 @@ void setup() {
     lcd.print("Timer Ready");
     
     // Setup button pins
-    pinMode(BUTTON_SEC, INPUT_PULLUP);
+    pinMode(BUTTON_FIVE_MIN, INPUT_PULLUP);
     pinMode(BUTTON_MIN, INPUT_PULLUP);
     pinMode(BUTTON_HOUR, INPUT_PULLUP);
     pinMode(BUTTON_RESET, INPUT_PULLUP);
     pinMode(BUTTON_START, INPUT_PULLUP);
-    pinMode(BUTTON_BUZZER_OFF, INPUT_PULLUP);
+    pinMode(DOOR_OPEN, INPUT_PULLUP);
     
     // Setup relay pin for buzzer
     pinMode(RELAY_BUZZER, OUTPUT);
@@ -56,33 +56,28 @@ void loop() {
 }
 
 void checkButtons() {
-    if (digitalRead(BUTTON_SEC) == LOW) {
-        delay(20);
-        if (digitalRead(BUTTON_SEC) == LOW) {
-            seconds++;
-            if (seconds >= 60) seconds = 0;
-            while (digitalRead(BUTTON_SEC) == LOW);
-            delay(20);
-        }
+    if (digitalRead(BUTTON_FIVE_MIN) == LOW) {
+      minutes += 5;
+      if (minutes >= 60) {
+        minutes = 0;
+        hours += 1;
+      }
+      delay(50);
     }
     
     if (digitalRead(BUTTON_MIN) == LOW) {
-        delay(20);
-        if (digitalRead(BUTTON_MIN) == LOW) {
-            minutes++;
-            if (minutes >= 60) minutes = 0;
-            while (digitalRead(BUTTON_MIN) == LOW);
-            delay(20);
-        }
+      minutes++;
+      if (minutes >= 60) {
+        minutes = 0;
+        hours += 1;
+      }
+      delay(50);
     }
     
     if (digitalRead(BUTTON_HOUR) == LOW) {
-        delay(20);
-        if (digitalRead(BUTTON_HOUR) == LOW) {
-            hours++;
-            while (digitalRead(BUTTON_HOUR) == LOW);
-            delay(20);
-        }
+      hours++;
+      while (digitalRead(BUTTON_HOUR) == LOW);
+      delay(20);
     }
     
     if (digitalRead(BUTTON_RESET) == LOW) {
@@ -105,12 +100,11 @@ void checkButtons() {
         }
     }
     
-    if (digitalRead(BUTTON_BUZZER_OFF) == LOW) {
-        delay(20);
-        if (digitalRead(BUTTON_BUZZER_OFF) == LOW) {
+    if (digitalRead(DOOR_OPEN) == LOW) {
+        delay(5000);
+        if (digitalRead(DOOR_OPEN) == LOW) {
             buzzerActive = false;
             digitalWrite(RELAY_BUZZER, LOW);
-            while (digitalRead(BUTTON_BUZZER_OFF) == LOW);
             delay(20);
         }
     }
@@ -154,8 +148,12 @@ void displayTime() {
     
     lcd.setCursor(0, 1);
     if (buzzerActive) {
-        lcd.print("PULL RACK, BAKING DONE");
+        lcd.print("PULL RACK");
+        lcd.setCursor(0,2);
+        lcd.print("BAKING DONE");
     } else {
         lcd.print(timerRunning ? "RUNNING  " : "STOPPED  ");
+        lcd.setCursor(0, 2);
+        lcd.print("                    ");
     }
 }
