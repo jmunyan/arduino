@@ -1,7 +1,7 @@
 #include <LiquidCrystal_I2C.h>
 
-// LCD setup (address 0x27, 20x2 display)
-LiquidCrystal_I2C lcd(0x27, 20, 2);
+// LCD setup (address 0x27, 20x4 display)
+LiquidCrystal_I2C lcd(0x27, 20, 4);
 
 // Button pins
 const int BUTTON_FIVE_MIN = 2;
@@ -184,7 +184,7 @@ void settings() {
     lcd.print("BUZZER SHUTOFF GAP");
     lcd.setCursor(0, 1);
     lcd.print(shutoffTime);
-    lcd.print(" SECONDS");
+    lcd.print(" SECONDS ");
     lcd.setCursor(0, 2);
-    lcd.print("ADJUST W/ MINUTE");
+    lcd.print("ADJUST W/ MINUTE BTN");
 }
