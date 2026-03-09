@@ -10,6 +10,7 @@ const int BUTTON_HOUR = 4;
 const int BUTTON_RESET = 5;
 const int BUTTON_START = 6;
 const int DOOR_OPEN = 7;
+const int BUTTON_SETTINGS = 9;
 
 // Relay pin for buzzer
 const int RELAY_BUZZER = 8;
@@ -21,6 +22,8 @@ unsigned long seconds = 0;
 unsigned long lastMillis = 0;
 bool timerRunning = false;
 bool buzzerActive = false;
+unsigned long shutoffTime = 5; // Buzzer shutoff time in seconds
+bool settingsMode = false;
 
 void setup() {
     // Initialize LCD
@@ -35,6 +38,7 @@ void setup() {
     pinMode(BUTTON_RESET, INPUT_PULLUP);
     pinMode(BUTTON_START, INPUT_PULLUP);
     pinMode(DOOR_OPEN, INPUT_PULLUP);
+    pinMode(BUTTON_SETTINGS, INPUT_PULLUP);
     
     // Setup relay pin for buzzer
     pinMode(RELAY_BUZZER, OUTPUT);
@@ -65,13 +69,13 @@ void checkButtons() {
       delay(50);
     }
     
-    if (digitalRead(BUTTON_MIN) == LOW) {
-      minutes++;
-      if (minutes >= 60) {
-        minutes = 0;
-        hours += 1;
-      }
-      delay(50);
+    if (digitalRead(BUTTON_MIN) == LOW && !settingsMode) {
+        minutes++;
+        if (minutes >= 60) {
+            minutes = 0;
+            hours += 1;
+        }
+        delay(50);
     }
     
     if (digitalRead(BUTTON_HOUR) == LOW) {
@@ -93,6 +97,7 @@ void checkButtons() {
     if (digitalRead(BUTTON_START) == LOW) {
         delay(20);
         if (digitalRead(BUTTON_START) == LOW) {
+            if (settingsMode) settingsMode = false;
             timerRunning = !timerRunning;
             lastMillis = millis();
             while (digitalRead(BUTTON_START) == LOW);
@@ -101,12 +106,28 @@ void checkButtons() {
     }
     
     if (digitalRead(DOOR_OPEN) == LOW) {
-        delay(5000);
+        delay(shutoffTime * 1000);  // Wait for the shutoff time
         if (digitalRead(DOOR_OPEN) == LOW) {
             buzzerActive = false;
             digitalWrite(RELAY_BUZZER, LOW);
             delay(20);
         }
+    }
+
+    if (digitalRead(BUTTON_SETTINGS) == LOW) {
+        settingsMode = true;
+        lcd.clear();
+        while(digitalRead(BUTTON_SETTINGS) == LOW){
+            settings(); 
+            if (digitalRead(BUTTON_MIN) == LOW) {
+                shutoffTime++;
+                if (shutoffTime >= 15) shutoffTime = 1; // Wrap around to 1 second after 60
+                while (digitalRead(BUTTON_MIN) == LOW);
+                delay(20);
+            }
+        };
+        settingsMode = false;
+        lcd.clear();
     }
 }
 
@@ -156,4 +177,14 @@ void displayTime() {
         lcd.setCursor(0, 2);
         lcd.print("                    ");
     }
+}
+
+void settings() {
+    lcd.setCursor(0, 0);
+    lcd.print("BUZZER SHUTOFF GAP");
+    lcd.setCursor(0, 1);
+    lcd.print(shutoffTime);
+    lcd.print(" SECONDS");
+    lcd.setCursor(0, 2);
+    lcd.print("ADJUST W/ MINUTE");
 }
