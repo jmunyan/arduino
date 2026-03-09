@@ -25,6 +25,7 @@ bool buzzerActive = false;
 unsigned long shutoffTime = 5; // Buzzer shutoff time in seconds
 bool settingsMode = false;
 
+// Initializes LCD, button pins, relay pin, and displays initial timer state
 void setup() {
     // Initialize LCD
     lcd.init();
@@ -48,6 +49,7 @@ void setup() {
     displayTime();
 }
 
+// Main loop - continuously checks buttons and updates timer display
 void loop() {
     checkButtons();
     
@@ -59,6 +61,7 @@ void loop() {
     delay(50);
 }
 
+// Handles all button input and adjusts timer or settings accordingly
 void checkButtons() {
     if (digitalRead(BUTTON_FIVE_MIN) == LOW) {
       minutes += 5;
@@ -131,6 +134,7 @@ void checkButtons() {
     }
 }
 
+// Decrements the timer by one second each time a full second has elapsed
 void updateTimer() {
     unsigned long currentMillis = millis();
     unsigned long elapsed = currentMillis - lastMillis;
@@ -154,6 +158,7 @@ void updateTimer() {
     }
 }
 
+// Updates the LCD display with current timer or buzzer status
 void displayTime() {
     lcd.setCursor(0, 0);
     lcd.print("Timer: ");
@@ -179,6 +184,7 @@ void displayTime() {
     }
 }
 
+// Displays and allows adjustment of buzzer shutoff time in settings mode
 void settings() {
     lcd.setCursor(0, 0);
     lcd.print("BUZZER SHUTOFF GAP");
