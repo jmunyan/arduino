@@ -16,9 +16,7 @@ const int BUTTON_SETTINGS = 9;
 const int RELAY_BUZZER = 8;
 
 // Timer variables
-unsigned long hours = 0;
-unsigned long minutes = 0;
-unsigned long seconds = 0;
+unsigned long totalSeconds = 0;  // Total timer time in seconds
 unsigned long lastMillis = 0;
 bool timerRunning = false;
 bool buzzerActive = false;
@@ -72,27 +70,19 @@ void loop() {
 void checkButtons() {
     // Add 5 minutes
     if (digitalRead(BUTTON_FIVE_MIN) == LOW) {
-        minutes += 5;
-        if (minutes >= 60) {
-            minutes -= 60;
-            hours += 1;
-        }
+        totalSeconds += 300;  // 5 * 60
         delay(50);  // Simple debouncing
     }
 
     // Add 1 minute (only if not in settings mode)
     if (digitalRead(BUTTON_MIN) == LOW && !settingsMode) {
-        minutes++;
-        if (minutes >= 60) {
-            minutes = 0;
-            hours += 1;
-        }
+        totalSeconds += 60;
         delay(50);  // Simple debouncing
     }
 
     // Add 1 hour
     if (digitalRead(BUTTON_HOUR) == LOW) {
-        hours++;
+        totalSeconds += 3600;  // 60 * 60
         while (digitalRead(BUTTON_HOUR) == LOW);  // Wait for release
         delay(20);
     }
@@ -102,7 +92,7 @@ void checkButtons() {
         delay(20);
         if (digitalRead(BUTTON_RESET) == LOW) {
             timerRunning = false;
-            hours = minutes = seconds = 0;
+            totalSeconds = 0;
             while (digitalRead(BUTTON_RESET) == LOW);  // Wait for release
             delay(20);
         }
@@ -160,15 +150,8 @@ void updateTimer() {
     unsigned long elapsed = currentMillis - lastMillis;
 
     if (elapsed >= 1000) {
-        if (seconds > 0) {
-            seconds--;
-        } else if (minutes > 0) {
-            minutes--;
-            seconds = 59;
-        } else if (hours > 0) {
-            hours--;
-            minutes = 59;
-            seconds = 59;
+        if (totalSeconds > 0) {
+            totalSeconds--;
         } else {
             // Timer finished
             timerRunning = false;
@@ -183,18 +166,23 @@ void updateTimer() {
  * Updates the LCD display with current timer status or buzzer message.
  */
 void displayTime() {
+    // Compute hours, minutes, seconds from totalSeconds
+    unsigned long displayHours = totalSeconds / 3600;
+    unsigned long displayMinutes = (totalSeconds % 3600) / 60;
+    unsigned long displaySeconds = totalSeconds % 60;
+
     lcd.setCursor(0, 0);
     lcd.print("Timer: ");
 
     // Format time as HH:MM:SS with leading zeros
-    if (hours < 10) lcd.print("0");
-    lcd.print(hours);
+    if (displayHours < 10) lcd.print("0");
+    lcd.print(displayHours);
     lcd.print(":");
-    if (minutes < 10) lcd.print("0");
-    lcd.print(minutes);
+    if (displayMinutes < 10) lcd.print("0");
+    lcd.print(displayMinutes);
     lcd.print(":");
-    if (seconds < 10) lcd.print("0");
-    lcd.print(seconds);
+    if (displaySeconds < 10) lcd.print("0");
+    lcd.print(displaySeconds);
 
     lcd.setCursor(0, 1);
     if (buzzerActive) {
