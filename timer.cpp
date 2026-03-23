@@ -25,14 +25,16 @@ bool buzzerActive = false;
 unsigned long shutoffTime = 5; // Buzzer shutoff time in seconds
 bool settingsMode = false;
 
-// Initializes LCD, button pins, relay pin, and displays initial timer state
+/**
+ * Initializes LCD, button pins, relay pin, and displays initial timer state.
+ */
 void setup() {
     // Initialize LCD
     lcd.init();
     lcd.backlight();
     lcd.print("Timer Ready");
-    
-    // Setup button pins
+
+    // Setup button pins as input with pull-up resistors
     pinMode(BUTTON_FIVE_MIN, INPUT_PULLUP);
     pinMode(BUTTON_MIN, INPUT_PULLUP);
     pinMode(BUTTON_HOUR, INPUT_PULLUP);
@@ -40,74 +42,87 @@ void setup() {
     pinMode(BUTTON_START, INPUT_PULLUP);
     pinMode(DOOR_OPEN, INPUT_PULLUP);
     pinMode(BUTTON_SETTINGS, INPUT_PULLUP);
-    
+
     // Setup relay pin for buzzer
     pinMode(RELAY_BUZZER, OUTPUT);
     digitalWrite(RELAY_BUZZER, LOW);  // Buzzer off initially
-    
+
     lastMillis = millis();
     displayTime();
 }
 
-// Main loop - continuously checks buttons and updates timer display
+/**
+ * Main loop - continuously checks buttons and updates timer display.
+ */
 void loop() {
     checkButtons();
-    
+
     if (timerRunning) {
         updateTimer();
     }
-    
+
     displayTime();
     delay(50);
 }
 
-// Handles all button input and adjusts timer or settings accordingly
+/**
+ * Handles all button input and adjusts timer or settings accordingly.
+ * Includes debouncing for buttons.
+ */
 void checkButtons() {
+    // Add 5 minutes
     if (digitalRead(BUTTON_FIVE_MIN) == LOW) {
-      minutes += 5;
-      if (minutes >= 60) {
-        minutes = 0;
-        hours += 1;
-      }
-      delay(50);
+        minutes += 5;
+        if (minutes >= 60) {
+            minutes -= 60;
+            hours += 1;
+        }
+        delay(50);  // Simple debouncing
     }
-    
+
+    // Add 1 minute (only if not in settings mode)
     if (digitalRead(BUTTON_MIN) == LOW && !settingsMode) {
         minutes++;
         if (minutes >= 60) {
             minutes = 0;
             hours += 1;
         }
-        delay(50);
+        delay(50);  // Simple debouncing
     }
-    
+
+    // Add 1 hour
     if (digitalRead(BUTTON_HOUR) == LOW) {
-      hours++;
-      while (digitalRead(BUTTON_HOUR) == LOW);
-      delay(20);
+        hours++;
+        while (digitalRead(BUTTON_HOUR) == LOW);  // Wait for release
+        delay(20);
     }
-    
+
+    // Reset timer
     if (digitalRead(BUTTON_RESET) == LOW) {
         delay(20);
         if (digitalRead(BUTTON_RESET) == LOW) {
             timerRunning = false;
             hours = minutes = seconds = 0;
-            while (digitalRead(BUTTON_RESET) == LOW);
+            while (digitalRead(BUTTON_RESET) == LOW);  // Wait for release
             delay(20);
         }
     }
-    
+
+    // Start/Stop timer
     if (digitalRead(BUTTON_START) == LOW) {
         delay(20);
         if (digitalRead(BUTTON_START) == LOW) {
-            if (settingsMode) settingsMode = false;
+            if (settingsMode) {
+                settingsMode = false;
+            }
             timerRunning = !timerRunning;
             lastMillis = millis();
-            while (digitalRead(BUTTON_START) == LOW);
+            while (digitalRead(BUTTON_START) == LOW);  // Wait for release
             delay(20);
         }
     }
-    
+
+    // Door open sensor - turn off buzzer after shutoff time
     if (digitalRead(DOOR_OPEN) == LOW) {
         delay(shutoffTime * 1000);  // Wait for the shutoff time
         if (digitalRead(DOOR_OPEN) == LOW) {
@@ -117,28 +132,33 @@ void checkButtons() {
         }
     }
 
+    // Enter settings mode
     if (digitalRead(BUTTON_SETTINGS) == LOW) {
         settingsMode = true;
         lcd.clear();
-        while(digitalRead(BUTTON_SETTINGS) == LOW){
-            settings(); 
+        while (digitalRead(BUTTON_SETTINGS) == LOW) {
+            settings();
+            // Adjust shutoff time with minute button
             if (digitalRead(BUTTON_MIN) == LOW) {
                 shutoffTime++;
-                if (shutoffTime >= 15) shutoffTime = 1; // Wrap around to 1 second after 60
+                if (shutoffTime >= 15) shutoffTime = 1; // Wrap around to 1 second after 15 seconds
                 while (digitalRead(BUTTON_MIN) == LOW);
                 delay(20);
             }
-        };
+        }
         settingsMode = false;
         lcd.clear();
     }
 }
 
-// Decrements the timer by one second each time a full second has elapsed
+/**
+ * Decrements the timer by one second each time a full second has elapsed.
+ * If timer reaches zero, stops the timer and activates the buzzer.
+ */
 void updateTimer() {
     unsigned long currentMillis = millis();
     unsigned long elapsed = currentMillis - lastMillis;
-    
+
     if (elapsed >= 1000) {
         if (seconds > 0) {
             seconds--;
@@ -150,6 +170,7 @@ void updateTimer() {
             minutes = 59;
             seconds = 59;
         } else {
+            // Timer finished
             timerRunning = false;
             buzzerActive = true;
             digitalWrite(RELAY_BUZZER, HIGH);  // Turn on buzzer relay
@@ -158,11 +179,14 @@ void updateTimer() {
     }
 }
 
-// Updates the LCD display with current timer or buzzer status
+/**
+ * Updates the LCD display with current timer status or buzzer message.
+ */
 void displayTime() {
     lcd.setCursor(0, 0);
     lcd.print("Timer: ");
-    
+
+    // Format time as HH:MM:SS with leading zeros
     if (hours < 10) lcd.print("0");
     lcd.print(hours);
     lcd.print(":");
@@ -171,20 +195,22 @@ void displayTime() {
     lcd.print(":");
     if (seconds < 10) lcd.print("0");
     lcd.print(seconds);
-    
+
     lcd.setCursor(0, 1);
     if (buzzerActive) {
         lcd.print("PULL RACK");
-        lcd.setCursor(0,2);
+        lcd.setCursor(0, 2);
         lcd.print("BAKING DONE");
     } else {
         lcd.print(timerRunning ? "RUNNING  " : "STOPPED  ");
         lcd.setCursor(0, 2);
-        lcd.print("                    ");
+        lcd.print("                    ");  // Clear line
     }
 }
 
-// Displays and allows adjustment of buzzer shutoff time in settings mode
+/**
+ * Displays settings screen for adjusting buzzer shutoff time.
+ */
 void settings() {
     lcd.setCursor(0, 0);
     lcd.print("BUZZER SHUTOFF GAP");
@@ -192,5 +218,5 @@ void settings() {
     lcd.print(shutoffTime);
     lcd.print(" SECONDS ");
     lcd.setCursor(0, 2);
-    lcd.print("ADJUST W/ MINUTE BTN");
+    lcd.print("ADJUST W/ MIN BTN");
 }
